@@ -1,22 +1,42 @@
 import socket  # noqa: F401
 import threading
 
-def handle_client(client_socket):
-    while True:
-        try:
-            request:bytes = client_socket.recv(512)
-            if not request:
-                break
-            data: str = request.decode()
+def parse_resp(data):
+    lines = data.split("\r\n")
+    if lines[0].startwith("*"):
+        num_elements = int(lines[0][1:])
+        elements = []
+        for i in range(num_elements):
+            element = lines[2 * i + 2]
+            elements.append(element)
+        return elements
+    return []
 
-            commands = data.split("\n")
-            for command in commands:
-                if "ping" in command.lower():
-                    client_socket.sendall("+PONG\r\n".encode())
-        except Exception as e:
-            print(f"Error handling client: {e}")
-            break
-    client_socket.close()
+def handle_client(command, client_socket):
+    if command[0].lower() == "echo":
+        if len(command) < 2:
+            client_socket.sendall("-ERR Missing argument for ECHO\r\n".encode())
+        else:
+            response = f"${len(command[1])}\r\n{command[1]}\r\n"
+            client_socket.sendall(response.encode())
+
+    else:
+        client_socket.sendall("-ERR Unknown command\r\n".encode())
+    # while True:
+    #     try:
+    #         request:bytes = client_socket.recv(512)
+    #         if not request:
+    #             break
+    #         data: str = request.decode()
+
+    #         commands = data.split("\n")
+    #         for command in commands:
+    #             if "ping" in command.lower():
+    #                 client_socket.sendall("+PONG\r\n".encode())
+    #     except Exception as e:
+    #         print(f"Error handling client: {e}")
+    #         break
+    # client_socket.close()
 
 def main():
     # You can use print statements as follows for debugging, they'll be visible when running tests.
