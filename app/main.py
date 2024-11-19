@@ -1,4 +1,5 @@
 import socket  # noqa: F401
+import
 
 
 def main():
@@ -16,8 +17,10 @@ def main():
         request: bytes = client_socket.recv(512)
         data: str = request.decode()
 
-        if "ping" in data.lower():
-            client_socket.sendall("+PONG\r\n".encode())
+        commands = data.split("\n")
+        for command in commands:
+            if "ping" in command.lower():
+                client_socket.sendall("+PONG\r\n".encode())
     # while True:
     #     request: bytes = client_socket.recv(512)
     #     data: str = request.decode()
