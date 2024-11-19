@@ -1,6 +1,8 @@
 import socket  # noqa: F401
 import threading
 
+store = {}
+
 def parse_resp(data):
     try:
         lines = data.split("\r\n")
@@ -11,8 +13,9 @@ def parse_resp(data):
                 element = lines[2 * i + 2]
                 elements.append(element)
             return elements
-        if lines[0].lower() == 'ping':
+        elif lines[0].lower() == 'ping':
             return ['ping']
+
     except Exception as e:
         print(f"Error parsing Resp:{e}")
     
@@ -34,6 +37,27 @@ def handle_client(client_socket):
                     client_socket.sendall(response.encode())
             elif commands[0].lower() == "ping":
                 client_socket.sendall("+PONG\r\n".encode())
+            elif commands[0].lower() == "set":
+                if len(commands) < 3:
+                    client_socket.sendall("-ERR Missing key or value for SET\r\n")
+                else:
+                    key = commands[1]
+                    value = commands[2]
+                    store[key] = value
+                    client_socket.sendall("+OK\r\n".encode())
+            elif commands[0].lower() == "get":
+                if len(commands) < 2:
+                    client_socket.sendall("-ERR Missing key for GET\r\n")
+                else:
+                    key = commands[1]
+                    if key in store:
+                        value = store[key]
+                        response = f"${len(value)}\r\n{value}\r\n"
+                        client_socket.sendall(response.encode())
+                    else:
+                        client_socket.sendall("$-1\r\n".encode())  # 키가 없으면 null bulk string 반환
+
+
         except Exception as e:
             print(f"Error handling client: {e}")
             break
