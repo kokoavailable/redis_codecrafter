@@ -19,6 +19,7 @@ def handle_client(client_socket):
     except Exception:
         # 파싱 실패 시 단순 명령어로 처리
         command = [request]
+        print(command)
 
     if command[0].lower() == "echo":
         if len(command) < 2:
