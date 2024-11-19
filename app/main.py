@@ -16,6 +16,12 @@ def handle_client(client_socket):
     request = client_socket.recv(512).decode()
     command = parse_resp(request)
 
+    try:
+        command = parse_resp(request)  # RESP 프로토콜 파싱 시도
+    except Exception:
+        # 파싱 실패 시 단순 명령어로 처리
+        command = [request]
+
     if command[0].lower() == "echo":
         if len(command) < 2:
             client_socket.sendall("-ERR Missing argument for ECHO\r\n".encode())
