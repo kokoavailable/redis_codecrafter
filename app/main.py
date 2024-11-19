@@ -22,8 +22,8 @@ def handle_client(client_socket):
         if len(command) < 2:
             client_socket.sendall("-ERR Missing argument for ECHO\r\n".encode())
         else:
-            print(response)
             response = f"${len(command[1])}\r\n{command[1]}\r\n"
+            print(response)
             client_socket.sendall(response.encode())
 
     else:
