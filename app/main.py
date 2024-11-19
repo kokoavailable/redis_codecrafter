@@ -14,9 +14,7 @@ def parse_resp(data):
 
 def handle_client(client_socket):
     request = client_socket.recv(512).decode()
-    print(request)
     command = parse_resp(request)
-    print(command)
 
     if command[0].lower() == "echo":
         if len(command) < 2:
