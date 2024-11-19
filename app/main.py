@@ -14,16 +14,13 @@ def parse_resp(data):
 
 def handle_client(client_socket):
     request = client_socket.recv(512).decode()
-    print(request)
     command = parse_resp(request)
-    print(command)
 
     if command[0].lower() == "echo":
         if len(command) < 2:
             client_socket.sendall("-ERR Missing argument for ECHO\r\n".encode())
         else:
             response = f"${len(command[1])}\r\n{command[1]}\r\n"
-            print(response)
             client_socket.sendall(response.encode())
 
     else:
