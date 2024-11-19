@@ -22,7 +22,8 @@ def handle_client(client_socket):
         else:
             response = f"${len(command[1])}\r\n{command[1]}\r\n"
             client_socket.sendall(response.encode())
-
+    elif command[0].lower() == "ping":
+        client_socket.sendall("+PONG\r\n".encode())
     else:
         client_socket.sendall("-ERR Unknown command\r\n".encode())
     # while True:
