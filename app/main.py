@@ -1,6 +1,5 @@
-import socket  # noqa: F401
+import socket
 import threading
-
 def handle_client(client_socket, client_address):
     while True:
         request = client_socket.recv(1024)
@@ -22,6 +21,5 @@ def main():
             target=handle_client, args=(client_socket, client_address)
         )
         client_thread.start()
-        
 if __name__ == "__main__":
     main()
