@@ -14,7 +14,7 @@ def parse_resp(data):
 
 def handle_client(client_socket):
     try:
-        request = client_socket.recv(512).decode()
+        request = client_socket.recv(512).decode().strip()
         command = parse_resp(request)  # RESP 프로토콜 파싱 시도
     except Exception:
         # 파싱 실패 시 단순 명령어로 처리
