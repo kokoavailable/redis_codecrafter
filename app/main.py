@@ -3,7 +3,7 @@ import threading
 
 def parse_resp(data):
     lines = data.split("\r\n")
-    if lines[0].startwith("*"):
+    if lines[0].startswith("*"):
         num_elements = int(lines[0][1:])
         elements = []
         for i in range(num_elements):
@@ -12,7 +12,7 @@ def parse_resp(data):
         return elements
     return []
 
-def handle_client(command, client_socket):
+def handle_client(client_socket):
     request = client_socket.recv(512).decode()
     print(request)
     command = parse_resp(request)
