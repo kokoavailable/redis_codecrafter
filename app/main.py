@@ -1,8 +1,10 @@
-import socket  # noqa: F401
+import socket
 import threading
 import time
+import sys
 
-store = {}
+store = {}  # 서버의 메모리 저장소
+config = {}  # dir 및 dbfilename 저장
 
 def parse_resp(data):
     try:
@@ -16,20 +18,8 @@ def parse_resp(data):
             return elements
         elif lines[0].lower() == 'ping':
             return ['ping']
-
     except Exception as e:
-        print(f"Error parsing Resp:{e}")
-
-def handle_expiry():
-    while True:
-        current_time = time.time() * 1000
-        keys_to_delete = []
-        for key, meta in store.items():
-            if meta.get("expiry") < current_time:
-                keys_to_delete.append(key)
-        for key in keys_to_delete:
-            del store[key]
-        time.sleep(0.1)
+        print(f"Error parsing Resp: {e}")
 
 def handle_client(client_socket):
     while True:
@@ -40,17 +30,36 @@ def handle_client(client_socket):
             data: str = request.decode()
             commands = parse_resp(data)
 
-            if commands[0].lower() == 'echo':
+            if not commands:
+                client_socket.sendall("-ERR Invalid command\r\n".encode())
+                continue
+
+            cmd = commands[0].lower()
+
+            if cmd == 'config' and len(commands) >= 3 and commands[1].lower() == 'get':
+                param = commands[2].lower()
+                if param in config:
+                    key = param
+                    value = config[param]
+                    response = (
+                        f"*2\r\n"
+                        f"${len(key)}\r\n{key}\r\n"
+                        f"${len(value)}\r\n{value}\r\n"
+                    )
+                    client_socket.sendall(response.encode())
+                else:
+                    client_socket.sendall("*0\r\n".encode())  # RESP 빈 배열
+            elif cmd == "echo":
                 if len(commands) < 2:
                     client_socket.sendall("-ERR Missing argument for ECHO\r\n".encode())
                 else:
                     response = f"${len(commands[1])}\r\n{commands[1]}\r\n"
                     client_socket.sendall(response.encode())
-            elif commands[0].lower() == "ping":
+            elif cmd == "ping":
                 client_socket.sendall("+PONG\r\n".encode())
-            elif commands[0].lower() == "set":
+            elif cmd == "set":
                 if len(commands) < 3:
-                    client_socket.sendall("-ERR Missing key or value for SET\r\n")
+                    client_socket.sendall("-ERR Missing key or value for SET\r\n".encode())
                 else:
                     key = commands[1]
                     value = commands[2]
@@ -60,11 +69,11 @@ def handle_client(client_socket):
                         expiery_time_ms = int(commands[4])
                         expiry = time.time() * 1000 + expiery_time_ms
 
-                    store[key] = {"value": value, "expiry":expiry}
+                    store[key] = {"value": value, "expiry": expiry}
                     client_socket.sendall("+OK\r\n".encode())
-            elif commands[0].lower() == "get":
+            elif cmd == "get":
                 if len(commands) < 2:
-                    client_socket.sendall("-ERR Missing key for GET\r\n")
+                    client_socket.sendall("-ERR Missing key for GET\r\n".encode())
                 else:
                     key = commands[1]
                     meta = store.get(key)
@@ -79,10 +88,8 @@ def handle_client(client_socket):
                             value = meta["value"]
                             response = f"${len(value)}\r\n{value}\r\n"
                             client_socket.sendall(response.encode())
-
             else:
                 client_socket.sendall("-ERR Unknown command\r\n".encode())
-
 
         except Exception as e:
             print(f"Error handling client: {e}")
@@ -90,11 +97,18 @@ def handle_client(client_socket):
     client_socket.close()
 
 def main():
-    # You can use print statements as follows for debugging, they'll be visible when running tests.
-    print("Logs from your program will appear here!")
-    # Uncomment this to pass the first stage
-    #
-    # 포트 이미 사용중. 오류 발생
+    global config
+
+    # CLI 인자로부터 dir 및 dbfilename 값을 읽음
+    args = sys.argv[1:]
+    for i in range(len(args)):
+        if args[i] == "--dir" and i + 1 < len(args):
+            config["dir"] = args[i + 1]
+        elif args[i] == "--dbfilename" and i + 1 < len(args):
+            config["dbfilename"] = args[i + 1]
+
+    print(f"Loaded configuration: {config}")
+
     try:
         server_socket = socket.create_server(("localhost", 6379), reuse_port=True)
         while True:
@@ -105,11 +119,6 @@ def main():
             client_thread.start()
     except Exception as e:
         print(f"Server error: {e}")
-    
-    # while True:
-    #     request: bytes = client_socket.recv(512)
-    #     data: str = request.decode()
-    #     if "ping" in data.lower():
-    #         client_socket.send("+PONG\r\n".encode())
+
 if __name__ == "__main__":
     main()
