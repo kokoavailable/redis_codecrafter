@@ -13,13 +13,11 @@ def parse_resp(data):
     return []
 
 def handle_client(client_socket):
-    try:
-        request = client_socket.recv(512).decode().strip()
-        command = parse_resp(request)  # RESP 프로토콜 파싱 시도
-    except Exception:
-        # 파싱 실패 시 단순 명령어로 처리
+    request = client_socket.recv(512).decode().strip()
+    command = parse_resp(request)  # RESP 프로토콜 파싱 시도
+
+    if not command:  # RESP 형식이 아니면 단순 명령으로 처리
         command = [request]
-        print(command)
 
     if command[0].lower() == "echo":
         if len(command) < 2:
