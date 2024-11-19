@@ -1,5 +1,6 @@
 import socket  # noqa: F401
 import threading
+import time
 
 store = {}
 
@@ -18,7 +19,17 @@ def parse_resp(data):
 
     except Exception as e:
         print(f"Error parsing Resp:{e}")
-    
+
+def handle_expiry():
+    while True:
+        current_time = time.time() * 1000
+        keys_to_delete = []
+        for key, meta in store.items():
+            if meta.get("expiry") < current_time:
+                keys_to_delete.append(key)
+        for key in keys_to_delete:
+            del store[key]
+        time.sleep(0.1)
 
 def handle_client(client_socket):
     while True:
@@ -43,19 +54,34 @@ def handle_client(client_socket):
                 else:
                     key = commands[1]
                     value = commands[2]
-                    store[key] = value
+                    expiry = None
+
+                    if len(commands) > 4 and commands[3].lower() == "px":
+                        expiery_time_ms = int(commands[4])
+                        expiry = time.time() * 1000 + expiery_time_ms
+
+                    store[key] = {"value": value, "expiry":expiry}
                     client_socket.sendall("+OK\r\n".encode())
             elif commands[0].lower() == "get":
                 if len(commands) < 2:
                     client_socket.sendall("-ERR Missing key for GET\r\n")
                 else:
                     key = commands[1]
-                    if key in store:
-                        value = store[key]
-                        response = f"${len(value)}\r\n{value}\r\n"
-                        client_socket.sendall(response.encode())
+                    meta = store.get(key)
+                    if not meta:
+                        client_socket.sendall("$-1\r\n".encode())
                     else:
-                        client_socket.sendall("$-1\r\n".encode())  # 키가 없으면 null bulk string 반환
+                        expiry = meta.get("expiry")
+                        if expiry and expiry < time.time() * 1000:
+                            del store[key]
+                            client_socket.sendall("$-1\r\n".encode())
+                        else:
+                            value = meta["value"]
+                            response = f"${len(value)}\r\n{value}\r\n"
+                            client_socket.sendall(response.encode())
+
+            else:
+                client_socket.sendall("-ERR Unknown command\r\n".encode())
 
 
         except Exception as e:
