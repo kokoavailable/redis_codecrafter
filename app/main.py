@@ -2,6 +2,7 @@ import socket
 import threading
 import time
 import sys
+import fnmatch
 
 store = {}  # 서버의 메모리 저장소
 config = {}  # dir 및 dbfilename 저장
@@ -53,9 +54,14 @@ def handle_client(client_socket):
                 if len(commands) < 2:
                     client_socket.sendall("-ERR Missing key or value for KEYS\r\n".encode())
                 else:
-                    keys = list(store.keys())
-                    response = f"*{len(keys)}\r\n{key}\r\n"
+                    pattern = commands[1]
+                    matching_keys = [key for key in store.keys() if fnmatch.fnmatch(key, pattern)]
+
+                    response = f"*{len(matching_keys)}\r\n"  # RESP 배열 시작
+                    for key in matching_keys:
+                        response += f"${len(key)}\r\n{key}\r\n"  # 각 키를 RESP 형식으로 추가
                     client_socket.sendall(response.encode())
+
 
             elif cmd == "echo":
                 if len(commands) < 2:
