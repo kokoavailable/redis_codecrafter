@@ -12,6 +12,7 @@ config = {}  # dir 및 dbfilename 저장
 def read_length(file):
     first_byte = struct.unpack("B", file.read(1))[0]
     type_bits = first_byte >> 6  # 상위 2비트
+
     if type_bits == 0b00:  # 1바이트 길이
         return first_byte & 0x3F
     elif type_bits == 0b01:  # 2바이트 길이
@@ -19,8 +20,10 @@ def read_length(file):
         return ((first_byte & 0x3F) << 8) | second_byte
     elif type_bits == 0b10:  # 5바이트 길이
         return struct.unpack(">I", file.read(4))[0]  # 4바이트 Big-endian
+    elif type_bits == 0b11:  # 압축 문자열 또는 정수
+        raise ValueError("Compressed or encoded data not supported yet")
     else:
-        raise ValueError("Unsupported length encoding")
+        raise ValueError("Unknown length encoding")
 
 def read_string(file):
     length = read_length(file)  # 사이즈 인코딩 처리
