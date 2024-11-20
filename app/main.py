@@ -9,8 +9,21 @@ import struct
 store = {}  # 서버의 메모리 저장소
 config = {}  # dir 및 dbfilename 저장
 
+def read_length(file):
+    first_byte = struct.unpack("B", file.read(1))[0]
+    type_bits = first_byte >> 6  # 상위 2비트
+    if type_bits == 0b00:  # 1바이트 길이
+        return first_byte & 0x3F
+    elif type_bits == 0b01:  # 2바이트 길이
+        second_byte = struct.unpack("B", file.read(1))[0]
+        return ((first_byte & 0x3F) << 8) | second_byte
+    elif type_bits == 0b10:  # 5바이트 길이
+        return struct.unpack(">I", file.read(4))[0]  # 4바이트 Big-endian
+    else:
+        raise ValueError("Unsupported length encoding")
+
 def read_string(file):
-    length = struct.unpack("B", file.read(1))[0]  # 단순 길이 읽기
+    length = read_length(file)  # 사이즈 인코딩 처리
     return file.read(length).decode("utf-8")
 
 def load_rdb_file():
@@ -23,6 +36,7 @@ def load_rdb_file():
     
     try:
         with open(rdb_path, "rb") as rdb_file:
+            # Header 처리
             header = rdb_file.read(9)
             if not header.startswith(b"REDIS"):
                 print("Invalid RDB file")
@@ -33,21 +47,31 @@ def load_rdb_file():
                 if not byte:
                     break
                 
-                if byte == b'\xFE':
-                    db_index = struct.unpack("B", rdb_file.read(1))[0]
-                    print(f"Reading database {db_index}")
-                    continue
+                if byte == b'\xFE':  # 데이터베이스 섹션 시작
+                    db_index = read_length(rdb_file)
+                    print(f"Switching to database {db_index}")
                 
-                elif byte == b'\x00':
+                elif byte == b'\xFD':  # 만료 정보 (초 단위)
+                    expiry = struct.unpack("<I", rdb_file.read(4))[0]
+                    print(f"Key will expire at {expiry} (seconds)")
+                
+                elif byte == b'\xFC':  # 만료 정보 (밀리초 단위)
+                    expiry = struct.unpack("<Q", rdb_file.read(8))[0]
+                    print(f"Key will expire at {expiry} (milliseconds)")
+                
+                elif byte == b'\x00':  # 키-값 데이터 (String)
                     key = read_string(rdb_file)
                     value = read_string(rdb_file)
                     store[key] = {"value": value, "expiry": None}
-                elif byte == b'\xFF':
+                    print(f"Loaded key: {key}, value: {value}")
+                
+                elif byte == b'\xFF':  # 파일 끝
                     print("End of RDB file")
                     break
+                
                 else:
                     print(f"Unhandled byte: {byte}")
-
+    
     except Exception as e:
         print(f"Error loading RDB file: {e}")
 
