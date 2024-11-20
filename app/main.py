@@ -56,7 +56,7 @@ def handle_client(client_socket):
                 else:
                     pattern = commands[1]
                     matching_keys = [key for key in store.keys() if fnmatch.fnmatch(key, pattern)]
-
+                    print(matching_keys)
                     response = f"*{len(matching_keys)}\r\n"  # RESP 배열 시작
                     for key in matching_keys:
                         response += f"${len(key)}\r\n{key}\r\n"  # 각 키를 RESP 형식으로 추가
