@@ -3,9 +3,52 @@ import threading
 import time
 import sys
 import fnmatch
+import os
+import struct
 
 store = {}  # 서버의 메모리 저장소
 config = {}  # dir 및 dbfilename 저장
+
+def read_string(file):
+    length = struct.unpack("B", file.read(1))[0]  # 단순 길이 읽기
+    return file.read(length).decode("utf-8")
+
+def load_rdb_file():
+    global config, store
+    rdb_path = os.path.join(config.get("dir", "."), config.get("dbfilename", "dump.rdb"))
+    
+    if not os.path.exists(rdb_path):
+        print(f"RDB file not found: {rdb_path}")
+        return
+    
+    try:
+        with open(rdb_path, "rb") as rdb_file:
+            header = rdb_file.read(9)
+            if not header.startswith(b"REDIS"):
+                print("Invalid RDB file")
+                return
+            
+            while True:
+                byte = rdb_file.read(1)
+                if not byte:
+                    break
+                
+                if byte == b'\xFE':
+                    db_index = struct.unpack("B", rdb_file.read(1))[0]
+                    print(f"Reading database {db_index}")
+                    continue
+                
+                elif byte == b'\x00':
+                    key = read_string(rdb_file)
+                    value = read_string(rdb_file)
+                    store[key] = {"value": value, "expiry": None}
+                elif byte == b'\xFF':
+                    print("End of RDB file")
+                    break
+                else:
+                    print(f"Unhandled byte: {byte}")
+    except Exception as e:
+        print(f"Error loading RDB file: {e}")
 
 def parse_resp(data):
     try:
