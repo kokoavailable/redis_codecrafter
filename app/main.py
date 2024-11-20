@@ -27,8 +27,32 @@ def read_length(file):
         raise ValueError("Unknown length encoding")
 
 def read_string(file):
-    length = read_length(file)  # 사이즈 인코딩 처리
-    return file.read(length).decode("utf-8")
+    length_info = read_length(file)  # 사이즈 인코딩 처리
+    
+    if isinstance(length_info, dict) and length_info["type"] == "special":
+        # 특수 형식 처리
+        fmt = length_info["format"]
+
+        if fmt == 0x00:  # 8-bit 정수
+            value = struct.unpack("B", file.read(1))[0]
+            return str(value)
+        elif fmt == 0x01:  # 16-bit 정수 (리틀 엔디안)
+            value = struct.unpack("<H", file.read(2))[0]
+            return str(value)
+        elif fmt == 0x02:  # 32-bit 정수 (리틀 엔디안)
+            value = struct.unpack("<I", file.read(4))[0]
+            return str(value)
+        elif fmt == 0x03:  # 압축된 문자열
+            raise ValueError("Compressed strings not supported")
+        else:
+            raise ValueError(f"Unknown special encoding format: {fmt}")
+
+    elif isinstance(length_info, int):
+        # 일반 문자열 처리
+        return file.read(length_info).decode("utf-8")
+
+    else:
+        raise ValueError(f"Unexpected length info: {length_info}")
 
 def load_rdb_file():
     global config, store
