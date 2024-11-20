@@ -49,6 +49,10 @@ def handle_client(client_socket):
                     client_socket.sendall(response.encode())
                 else:
                     client_socket.sendall("*0\r\n".encode())  # RESP 빈 배열
+            elif cmd == "keys":
+                if len(commands) < 2:
+                    client_socket.sendall("-ERR Missing key or value for KEYS\r\n".encode())
+
             elif cmd == "echo":
                 if len(commands) < 2:
                     client_socket.sendall("-ERR Missing argument for ECHO\r\n".encode())
@@ -66,8 +70,8 @@ def handle_client(client_socket):
                     expiry = None
 
                     if len(commands) > 4 and commands[3].lower() == "px":
-                        expiery_time_ms = int(commands[4])
-                        expiry = time.time() * 1000 + expiery_time_ms
+                        expiry_time_ms = int(commands[4])
+                        expiry = time.time() * 1000 + expiry_time_ms
 
                     store[key] = {"value": value, "expiry": expiry}
                     client_socket.sendall("+OK\r\n".encode())
