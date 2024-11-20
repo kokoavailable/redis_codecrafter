@@ -52,6 +52,10 @@ def handle_client(client_socket):
             elif cmd == "keys":
                 if len(commands) < 2:
                     client_socket.sendall("-ERR Missing key or value for KEYS\r\n".encode())
+                else:
+                    keys = list(store.keys())
+                    response = f"*{len(keys)}\r\n{key}\r\n"
+                    client_socket.sendall(response.encode())
 
             elif cmd == "echo":
                 if len(commands) < 2:
