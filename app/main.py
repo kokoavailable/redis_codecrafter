@@ -55,6 +55,8 @@ def handle_client(client_socket):
                     client_socket.sendall("-ERR Missing key or value for KEYS\r\n".encode())
                 else:
                     pattern = commands[1]
+                    print(pattern)
+                    print(store.keys())
                     matching_keys = [key for key in store.keys() if fnmatch.fnmatch(key, pattern)]
                     print(matching_keys)
                     response = f"*{len(matching_keys)}\r\n"  # RESP 배열 시작
