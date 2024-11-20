@@ -21,7 +21,8 @@ def read_length(file):
     elif type_bits == 0b10:  # 5바이트 길이
         return struct.unpack(">I", file.read(4))[0]  # 4바이트 Big-endian
     elif type_bits == 0b11:  # 압축 문자열 또는 정수
-        raise ValueError("Compressed or encoded data not supported yet")
+        remaining_bits = first_byte & 0x3F  # 하위 6비트
+        return {"type": "special", "format": remaining_bits}
     else:
         raise ValueError("Unknown length encoding")
 
