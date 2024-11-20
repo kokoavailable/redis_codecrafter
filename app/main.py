@@ -47,6 +47,7 @@ def load_rdb_file():
                     break
                 else:
                     print(f"Unhandled byte: {byte}")
+
     except Exception as e:
         print(f"Error loading RDB file: {e}")
 
@@ -167,6 +168,10 @@ def main():
             config["dbfilename"] = args[i + 1]
 
     print(f"Loaded configuration: {config}")
+
+    # RDB 파일 로드
+    load_rdb_file()
+    print(f"Initial store: {store}")
 
     try:
         server_socket = socket.create_server(("localhost", 6379), reuse_port=True)
