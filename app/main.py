@@ -47,9 +47,25 @@ def load_rdb_file():
                 if not byte:
                     break
                 
-                if byte == b'\xFE':  # 데이터베이스 섹션 시작
+                # 메타데이터 섹션 처리
+                if byte == b'\xFA':  # 메타데이터 시작
+                    name = read_string(rdb_file)
+                    value = read_string(rdb_file)
+                    print(f"Metadata: {name} = {value}")
+                    continue
+
+                # 데이터베이스 섹션 처리
+                elif byte == b'\xFE':  # 데이터베이스 섹션 시작
                     db_index = read_length(rdb_file)
                     print(f"Switching to database {db_index}")
+                    continue
+                
+                # 해시 테이블 크기 정보 처리
+                elif byte == b'\xFB':  # 해시 테이블 크기 정보
+                    keys_size = read_length(rdb_file)  # 키-값 테이블 크기
+                    expires_size = read_length(rdb_file)  # 만료 테이블 크기
+                    print(f"Hash table sizes: keys={keys_size}, expires={expires_size}")
+                    continue
                 
                 elif byte == b'\xFD':  # 만료 정보 (초 단위)
                     expiry = struct.unpack("<I", rdb_file.read(4))[0]
